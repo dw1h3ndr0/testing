@@ -1,0 +1,50 @@
+SELECT
+  b.level_6_full_code AS id_subsls,
+  b.level_6_name      AS nama_subsls,
+
+  -- Penanda sumber dokumen
+  CASE WHEN UPPER(b.code_identity) LIKE '%DTSEN%' THEN 'USAHA DALAM KELUARGA'
+       WHEN TRIM(COALESCE(b.data6,'')) <> ''      THEN 'PRELIST USAHA'
+       ELSE 'TAMBAHAN LAPANGAN' END AS sumber_dokumen,
+
+  -- Identitas usaha & pemilik
+  a.nama_usaha,
+  a.pengusaha           AS nama_pj_pengusaha_prelist,
+  a.pengusaha_var_label AS nama_pj_pengusaha_keluarga,
+  a.idsbr,
+
+  -- Kategori & KBLI
+  a.keberadaan_usaha_label,
+  a.kategori,
+  a.kategori_2025,
+  RIGHT(COALESCE(a.kbli_akhir, a.kbli_genai_value, ''), 5) AS kbli_5_digit,
+
+  -- Ringkasan indikator
+  a.total_tk_jk     AS tenaga_kerja_r24c1,
+  a.gaji            AS upah_gaji_r26a,
+  a.biaya_produksi  AS biaya_produksi_r26b,
+  a.biaya_pembelian AS biaya_pembelian_r26c,
+  a.operasional     AS biaya_operasional_r26d,
+  a.non_operasional AS biaya_non_operasional_r26e,
+  a.nilai_pendapatan AS omset_r27a,
+  a.pendapatan_lain  AS pendapatan_lainnya_r27b,
+
+  -- Output & nilai tambah
+  (a.nilai_pendapatan - a.biaya_pembelian) AS output,
+  ((a.nilai_pendapatan - a.biaya_pembelian) - a.biaya_produksi - a.operasional) AS nilai_tambah,
+
+  CONCAT('https://fasih-sm.bps.go.id/app/assignment/', b.survey_period_id, '/', b.assignment_id) AS link_fasih
+
+FROM tgr_fd68e454.base_table_assignment b
+INNER JOIN tgr_fd68e454.se2026_nested a
+        ON a.assignment_id = b.assignment_id
+       AND a.assignment_date_modified = b.assignment_date_modified
+
+WHERE b.is_active = 1
+  AND b.level_1_full_code = '18'
+  AND a.keberadaan_usaha_value IN ('1', '2', '3')
+
+-- Tambahan assignment_id & idsbr sebagai tiebreaker supaya urutan antar batch stabil
+ORDER BY sumber_dokumen ASC, b.level_2_full_code ASC, b.level_6_full_code ASC,
+         b.assignment_id ASC, a.idsbr ASC
+LIMIT 9000 OFFSET 0;
