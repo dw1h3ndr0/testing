@@ -1,0 +1,8 @@
+SELECT COUNT(*) AS total_baris
+FROM tgr_fd68e454.base_table_assignment b
+INNER JOIN tgr_fd68e454.se2026_nested a
+        ON a.assignment_id = b.assignment_id
+       AND a.assignment_date_modified = b.assignment_date_modified
+WHERE b.is_active = 1
+  AND b.level_1_full_code = '18'
+  AND a.keberadaan_usaha_value IN ('1', '2', '3');
